@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Inventory — Liquid Glass Fixed</title>
+  <style>
+    :root {
+      --bg-1: #04050b;
+      --bg-2: #071028;
+      --accent: #08e6ff;
+      --accent-2: #9b6bff;
+      --glass-border: rgba(255,255,255,0.08);
+      --muted: rgba(255,255,255,0.6);
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: radial-gradient(circle at 10% 20%, rgba(8,230,255,0.08), transparent 25%),
+                  radial-gradient(circle at 90% 80%, rgba(155,107,255,0.08), transparent 25%),
+                  var(--bg-1);
+      font-family: 'Segoe UI', sans-serif;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .glass-card {
+      width: 90%;
+      max-width: 900px;
+      height: 80vh;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+    }
+
+    .card-header {
+      padding: 20px 25px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 25px;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+    
+    input, select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      padding: 12px;
+      border-radius: 12px;
+      color: white;
+      width: 100%;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .btn {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: 0.3s;
+    }
+
+    .btn.ghost { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); width: auto; padding: 6px 12px; font-size: 12px; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { text-align: left; color: var(--muted); font-size: 12px; padding: 12px; border-bottom: 1px solid var(--glass-border); }
+    td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px; }
+
+    /* Bottom Balance Area */
+    .balance-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 15px;
+      padding: 15px;
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-bottom {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 15px;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .nav-btn {
+      width: 50px; height: 50px; border-radius: 15px; border: none;
+      background: rgba(255,255,255,0.05); color: white; font-size: 20px; cursor: pointer;
+    }
+
+    .nav-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); transform: translateY(-5px); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="glass-card">
+    <div class="card-header">
+      <div>
+        <h2 style="margin:0;">My Inventory</h2>
+        <small style="color:var(--muted)">Liquid Glass Passbook</small>
+      </div>
+      <button class="btn ghost" onclick="location.reload()">Refresh</button>
+    </div>
+
+    <div class="card-body">
+      <div id="panel-add" class="panel active">
+        <h3>Add New Entry</h3>
+        <div class="form-row">
+          <input type="date" id="date">
+          <select id="type">
+            <option value="credit">Credit (+)</option>
+            <option value="debit">Debit (-)</option>
+          </select>
+        </div>
+        <input type="text" id="reason" placeholder="Reason (e.g. Salary, Rent)" style="margin-bottom:15px;">
+        <input type="number" id="amount" placeholder="Amount (?)" style="margin-bottom:15px;">
+        <button class="btn" id="submitBtn">Save Transaction</button>
+      </div>
+
+      <div id="panel-history" class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>Transaction History</h3>
+          <button class="btn ghost" id="exportExcel">Export Excel</button>
+        </div>
+        <table id="entriesTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Reason</th>
+              <th>Amount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        
+        <div class="balance-box">
+          <span style="color:var(--muted); font-weight:bold;">CURRENT BALANCE</span>
+          <span id="totalBalance" style="font-size:20px; font-weight:bold; color:var(--accent);">? 0.00</span>
+        </div>
+      </div>
+
+      <div id="panel-recycle" class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>Recycle Bin</h3>
+          <button class="btn" style="width:auto; padding:5px 12px; background:red;" onclick="emptyBin()">Empty Bin</button>
+        </div>
+        <table id="recycleTable">
+          <thead><tr><th>Date</th><th>Reason</th><th>Amount</th><th>Action</th></tr></thead>
+          <tbody id="recycleBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="nav-bottom">
+      <button class="nav-btn active" onclick="showTab('add', this)">?</button>
+      <button class="nav-btn" onclick="showTab('history', this)">??</button>
+      <button class="nav-btn" onclick="showTab('recycle', this)">???</button>
+    </div>
+  </div>
+
+  <script>
+    const DATA_KEY = 'my_inv_v10_data';
+    const RECYCLE_KEY = 'my_inv_v10_recycle';
+
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+    function showTab(tabId, btn) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + tabId).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if(tabId === 'history') renderHistory();
+      if(tabId === 'recycle') renderRecycle();
+    }
+
+    document.getElementById('submitBtn').onclick = () => {
+      const entry = {
+        id: Date.now(),
+        date: document.getElementById('date').value,
+        type: document.getElementById('type').value,
+        reason: document.getElementById('reason').value || 'No Reason',
+        amount: parseFloat(document.getElementById('amount').value) || 0
+      };
+      if(entry.amount <= 0) return alert("Enter valid amount");
+      
+      let data = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+      data.push(entry);
+      localStorage.setItem(DATA_KEY, JSON.stringify(data));
+      alert("Transaction Saved!");
+      document.getElementById('reason').value = '';
+      document.getElementById('amount').value = '';
+    };
+
+    function renderHistory() {
+      const tbody = document.getElementById('tableBody');
+      const data = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+      tbody.innerHTML = '';
+      let balance = 0;
+
+      data.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(item => {
+        const isCredit = item.type === 'credit';
+        balance += isCredit ? item.amount : -item.amount;
+        
+        tbody.innerHTML += `<tr>
+          <td>${item.date}</td>
+          <td>${item.reason}</td>
+          <td style="color:${isCredit ? '#08e6ff' : '#ff4b2b'}">
+            ${isCredit ? '+' : '-'} ?${item.amount.toLocaleString()}
+          </td>
+          <td><button class="btn ghost" onclick="deleteToRecycle(${item.id})">Delete</button></td>
+        </tr>`;
+      });
+      
+      const balEl = document.getElementById('totalBalance');
+      balEl.innerText = '? ' + balance.toLocaleString();
+      balEl.style.color = balance >= 0 ? 'var(--accent)' : '#ff4b2b';
+    }
+
+    function deleteToRecycle(id) {
+      let data = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+      let rec = JSON.parse(localStorage.getItem(RECYCLE_KEY) || '[]');
+      const item = data.find(x => x.id === id);
+      rec.push(item);
+      localStorage.setItem(DATA_KEY, JSON.stringify(data.filter(x => x.id !== id)));
+      localStorage.setItem(RECYCLE_KEY, JSON.stringify(rec));
+      renderHistory();
+    }
+
+    function renderRecycle() {
+      const tbody = document.getElementById('recycleBody');
+      const data = JSON.parse(localStorage.getItem(RECYCLE_KEY) || '[]');
+      tbody.innerHTML = data.length ? '' : '<tr><td colspan="4" style="text-align:center">Bin is empty</td></tr>';
+      data.forEach(item => {
+        tbody.innerHTML += `<tr>
+          <td>${item.date}</td><td>${item.reason}</td><td>?${item.amount}</td>
+          <td>
+            <button class="btn ghost" onclick="restore(${item.id})">Restore</button>
+            <button class="btn ghost" style="color:red" onclick="permDelete(${item.id})">X</button>
+          </td>
+        </tr>`;
+      });
+    }
+
+    function restore(id) {
+      let data = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+      let rec = JSON.parse(localStorage.getItem(RECYCLE_KEY) || '[]');
+      const item = rec.find(x => x.id === id);
+      data.push(item);
+      localStorage.setItem(DATA_KEY, JSON.stringify(data));
+      localStorage.setItem(RECYCLE_KEY, JSON.stringify(rec.filter(x => x.id !== id)));
+      renderRecycle();
+    }
+
+    function permDelete(id) {
+      let rec = JSON.parse(localStorage.getItem(RECYCLE_KEY) || '[]');
+      localStorage.setItem(RECYCLE_KEY, JSON.stringify(rec.filter(x => x.id !== id)));
+      renderRecycle();
+    }
+
+    function emptyBin() {
+      if(confirm("Delete all permanently?")) {
+        localStorage.setItem(RECYCLE_KEY, '[]');
+        renderRecycle();
+      }
+    }
+
+    document.getElementById('exportExcel').onclick = () => {
+      const data = JSON.parse(localStorage.getItem(DATA_KEY) || '[]');
+      let csv = 'Date,Reason,Type,Amount\n';
+      data.forEach(r => csv += `${r.date},${r.reason},${r.type},${r.amount}\n`);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'inventory_report.csv';
+      a.click();
+    };
+  </script>
+</body>
+</html>
